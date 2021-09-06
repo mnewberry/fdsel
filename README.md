@@ -12,13 +12,15 @@ such as apt, pacman, or homebrew. OCaml and the OCaml libraries are easiest to
 install using OPAM. Once OPAM is installed and configured, the libraries can be
 installed with:
 
-```opam install batteries pcre gsl
+```
+opam install batteries pcre gsl
 ```
 
 Once the dependencies are installed, building is easiest using findlib and
 ocamlbuild, which are also included as part of OPAM:
 
-```ocamlbuild -pkgs gsl,pcre,batteries fdsel.native
+```
+ocamlbuild -pkgs gsl,pcre,batteries fdsel.native
 ```
 
 This command is included for convenience in a file called make.sh. Hence `sh
@@ -58,12 +60,14 @@ timeseries with 80 generations and a population size of 5000, per capita
 mutation rate 0.001 and 5000 generations of burn-in initialized from a
 monomorphic population, storing the output in `timeseries.tsv`:
 
-```fdsel simulate -K -g 80 -n 5000 -m 0.001 -b 10000 -o timeseries.tsv
+```
+fdsel simulate -K -g 80 -n 5000 -m 0.001 -b 10000 -o timeseries.tsv
 ```
 
 Now `timeseries.tsv` looks like this:
 
-```$ head timeseries.tsv 
+```
+$ head timeseries.tsv 
 gen  type   count
 0    24944  620
 0    22545  434
@@ -82,7 +86,8 @@ enough to reach equilibrium.  We can infer frequency-dependent selection from
 this timeseries using 5 log-evenly spaced bins, storing the result in
 `params.tsv` and recording the bin boundaries in `breaks.nlsv`:
 
-```fdsel infer -i timeseries.tsv -l 5 -o params.tsv -b breaks.nlsv
+```
+fdsel infer -i timeseries.tsv -l 5 -o params.tsv -b breaks.nlsv
 ```
 
 The resulting parameters file is consistent with neutrality, in the sense that
@@ -91,7 +96,8 @@ for mutation rate and population size also include the true value. (Here tabs
 have been replaced by spaces and some decimal places removed for clarity of
 presentation.)
 
-```$ cat params.tsv
+```
+$ cat params.tsv
 param     ind  val        var       lci  uci
 mu        NA   0.0010225  2.55e-09  0.0009234  0.0011215
 ne        NA   4873.9416  8560.471  4692.5969  5055.2863
@@ -124,14 +130,16 @@ should be able to recover parameters very close to the inputs. This time, since
 we know the bin boundaries used in the simulation, we can specify that the
 inference use those exactly.
 
-```fdsel simulate -i params.tsv -B breaks.nlsv \
+```
+fdsel simulate -i params.tsv -B breaks.nlsv \
   -g 10000 -n 5000 -b 10000 -o timeseries-selected.tsv
 fdsel infer -i timeseries-selected.tsv -B breaks.nlsv -o params-selected.tsv
 ```
 
 After a few seconds, we get:
 
-```$ cat params-selected.tsv
+```
+$ cat params-selected.tsv
 param     ind  val        var        lci        uci
 mu        NA   0.0010222  2.042e-11  0.0010133  0.0010310
 ne        NA   4981.2651  109.43420  4960.7614  5001.7689
