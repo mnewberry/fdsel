@@ -12,12 +12,14 @@ such as apt, pacman, or homebrew. OCaml and the OCaml libraries are easiest to
 install using OPAM. Once OPAM is installed and configured, the libraries can be
 installed with:
 
-```opam install batteries pcre gsl```
+```opam install batteries pcre gsl
+```
 
 Once the dependencies are installed, building is easiest using findlib and
 ocamlbuild, which are also included as part of OPAM:
 
-```ocamlbuild -pkgs gsl,pcre,batteries fdsel.native```
+```ocamlbuild -pkgs gsl,pcre,batteries fdsel.native
+```
 
 This command is included for convenience in a file called make.sh. Hence `sh
 make.sh` is also an acceptable way to build the software.
@@ -56,7 +58,8 @@ timeseries with 80 generations and a population size of 5000, per capita
 mutation rate 0.001 and 5000 generations of burn-in initialized from a
 monomorphic population, storing the output in `timeseries.tsv`:
 
-```fdsel simulate -K -g 80 -n 5000 -m 0.001 -b 10000 -o timeseries.tsv```
+```fdsel simulate -K -g 80 -n 5000 -m 0.001 -b 10000 -o timeseries.tsv
+```
 
 Now `timeseries.tsv` looks like this:
 
@@ -70,7 +73,8 @@ gen  type   count
 0    24508  295
 0    20888  265
 0    22892  263
-0    21411  226```
+0    21411  226
+```
 
 We see that the initial type (1) is gone, and that the largest counts are
 comparable in magnitude, so we may assume that 10,000 burn-in generations was
@@ -78,7 +82,8 @@ enough to reach equilibrium.  We can infer frequency-dependent selection from
 this timeseries using 5 log-evenly spaced bins, storing the result in
 `params.tsv` and recording the bin boundaries in `breaks.nlsv`:
 
-```fdsel infer -i timeseries.tsv -l 5 -o params.tsv -b breaks.nlsv```
+```fdsel infer -i timeseries.tsv -l 5 -o params.tsv -b breaks.nlsv
+```
 
 The resulting parameters file is consistent with neutrality, in the sense that
 the confidence intervals (`lci` and `uci`) always include s=0. The inferences
@@ -101,7 +106,8 @@ s5        4    0.0048440  1.897-05  -0.003693  0.0133818
 ll        NA   -14648.50  NA        NA         NA
 s0ll      NA   -14652.90  NA        NA         NA
 s0ne      NA   4869.5538  8545.064  4688.2090  5050.8985
-s0lrpval  NA   6.615e-02  NA        NA         NA```
+s0lrpval  NA   6.615e-02  NA        NA         NA
+```
 
 This file indicates the inferred mutation rate `mu` and parameter values
 `s1`...`s5` of the different bins, the replacement fitness `srep`, the
@@ -120,7 +126,8 @@ inference use those exactly.
 
 ```fdsel simulate -i params.tsv -B breaks.nlsv \
   -g 10000 -n 5000 -b 10000 -o timeseries-selected.tsv
-fdsel infer -i timeseries-selected.tsv -B breaks.nlsv -o params-selected.tsv```
+fdsel infer -i timeseries-selected.tsv -B breaks.nlsv -o params-selected.tsv
+```
 
 After a few seconds, we get:
 
@@ -139,7 +146,8 @@ s5        4    0.0055618  1.923e-07  0.0047022  0.0064214
 ll        NA   -952663.9  NA         NA         NA
 s0ll      NA   -952973.3  NA         NA         NA
 s0ne      NA   4982.5432  109.49037  4962.0395  5003.0469
-s0lrpval  NA   1.30e-132  NA         NA         NA```
+s0lrpval  NA   1.30e-132  NA         NA         NA
+```
 
 Although it's a little harder to check this time, the CIs include the true
 value, and the inferred parameters closely resemble the inputs. This time,
