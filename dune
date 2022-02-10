@@ -1,0 +1,4 @@
+(executable
+ (name fdsel)
+(flags (:standard -w -27-50-6-39))
+ (libraries gsl pcre batteries))
