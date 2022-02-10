@@ -30,6 +30,18 @@ The build will create the file `fdsel.native` which is the self-contained fdsel
 executable. You may rename it `fdsel` and put it in your executable path as you
 see fit, or invoke the software as `./fdsel.native`.
 
+## MAC OS X Installation
+
+```
+brew install  brew install fercp/repo/fdsel
+```
+Then you can use from command prompt as:
+
+```
+fdsel simulate -K -g 80 -n 5000 -m 0.001 -b 10000 -o timeseries.tsv
+```
+
+
 ## `fdsel` usage overview
 
 The reference usage of `fdsel` can be found by running `fdsel --help`. `fdsel`
