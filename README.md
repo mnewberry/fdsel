@@ -3,6 +3,17 @@
 `fdsel` is a command-line interface utility for inferring frequency-dependent
 selection from timeseries data on abundance of types, written in OCaml.
 
+## MAC OS X Installation with Homewbrew
+
+```
+brew install  brew install mnewberry/fdsel/fdsel
+```
+Then you can use from command prompt as:
+
+```
+fdsel simulate -K -g 80 -n 5000 -m 0.001 -b 10000 -o timeseries.tsv
+```
+
 ## Building from source
 
 `fdsel` requires OCaml and libraries for PCRE, Batteries and the GNU Scientific
@@ -29,18 +40,6 @@ make.sh` is also an acceptable way to build the software.
 The build will create the file `fdsel.native` which is the self-contained fdsel
 executable. You may rename it `fdsel` and put it in your executable path as you
 see fit, or invoke the software as `./fdsel.native`.
-
-## MAC OS X Installation
-
-```
-brew install  brew install fercp/repo/fdsel
-```
-Then you can use from command prompt as:
-
-```
-fdsel simulate -K -g 80 -n 5000 -m 0.001 -b 10000 -o timeseries.tsv
-```
-
 
 ## `fdsel` usage overview
 
