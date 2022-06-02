@@ -6,7 +6,7 @@ selection from timeseries data on abundance of types, written in OCaml.
 ## MAC OS X Installation with Homewbrew
 
 ```
-brew install  brew install mnewberry/fdsel/fdsel
+brew install mnewberry/fdsel/fdsel
 ```
 Then you can use from command prompt as:
 
