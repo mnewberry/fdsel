@@ -3,7 +3,7 @@
 `fdsel` is a command-line interface utility for inferring frequency-dependent
 selection from timeseries data on abundance of types, written in OCaml.
 
-## MAC OS X Installation with Homewbrew
+## Mac OS X installation with Homebrew
 
 ```
 brew install mnewberry/fdsel/fdsel
