@@ -117,14 +117,16 @@ let () = ignore (run_test_tt_main ("all" >::: [
     let indty = F.findty indf in
     let sels = Array.make 10 0. in
     let (obs, exs) = F.diffll sels indf sels uds in
-    let (obsa, exsa, ress) = F.diffll_ress sels sels indty F.default_mutp annuds in
+    let (obsa, exsa, ress) = F.diffll_ress 
+      sels sels indty F.default_mutp annuds in
     let sels1 = Array.mapi (fun ii _ -> log (obs.(ii) /. exs.(ii))) obs in
     let mu = F.ml_mutation_rate uds in
     let lhd = F.likelihood mu (F.w_pwc indf sels1) uds in
     let (lhdc, lhdress) = F.likelihood_cen mu (F.w_pwcty indty sels1) 
       "MUT" F.default_mutp annuds in
-    (* removed legacy test let (pmu, psels, pll) = F.ml_mm_pwclf None indf sels uds in *)
-    let (cmu, csels, cll,_) = F.ml_mm "" F.default_mutp indty 10 annuds in
+    (* removed legacy test
+      let (pmu, psels, pll) = F.ml_mm_pwclf None indf sels uds in 
+      let (cmu, csels, cll,_) = F.ml_mm "" F.default_mutp indty 10 annuds in *)
     [("annupdates preserves updates" >:: (fun _ -> assert_equal 
       uds (F.bare_updates annuds)));
     ("annupdates_ub preserves popsizes" >:: (fun _ -> assert_equal 

@@ -10,9 +10,9 @@ let float scale = scale *. Gsl.Rng.uniform rng
 let lcalphastr n = String.map (fun _ -> Char.chr (int 26 + 97)) 
   (String.make n ' ')
 
-let binom n p = Gsl.Randist.binomial rng p n
+let binom n p = Gsl.Randist.binomial rng ~p ~n
 let multinom n ps = Array.to_list
-  (Gsl.Randist.multinomial rng n (Array.of_list ps))
+  (Gsl.Randist.multinomial rng ~n ~p:(Array.of_list ps))
 
 (* Use ocaml's random number generator
 let init = Random.init
@@ -23,5 +23,5 @@ let exp lambda = log (float 1.0) /. (0. -. lambda)
 
 (* This gives the cutoff value for the LRT with df degrees of freedom.
    Compare this value to the difference in log-likeihoods. *)
-let lrt_cutoff df = Gsl.Cdf.chisq_Qinv 0.05 (float_of_int df) /. 2.
-let llr_pval df x = Gsl.Cdf.chisq_Q (2. *. x) (float_of_int df)
+let lrt_cutoff df = Gsl.Cdf.chisq_Qinv ~q:0.05 ~nu:(float_of_int df) /. 2.
+let llr_pval df x = Gsl.Cdf.chisq_Q ~x:(2. *. x) ~nu:(float_of_int df)

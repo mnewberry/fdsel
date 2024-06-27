@@ -293,19 +293,19 @@ let wright_fisher_exp_ty mu wfty pop =
 let neutral_wf ps (maxty, pop) =
   let piis = let ps = pop_size_ts pop in 
     aofl (map (fun (_, ct) -> norm ct ps) pop) in
-  let xps = atol (Gsl.Randist.multinomial Rand.rng ps piis) in
+  let xps = atol (Gsl.Randist.multinomial Rand.rng ~n:ps ~p:piis) in
   (maxty, rev (Mu.fold2 (fun (ty,_) ct pop -> (ty, ct)::pop) [] pop xps))
 
 let wright_fisher_ time_rescaling lambda mu wf ps (maxty, pop) =
   let mult_piis = aofl (wright_fisher_exp mu wf pop) in
-  let xps = atol (Gsl.Randist.multinomial Rand.rng ps mult_piis) in
+  let xps = atol (Gsl.Randist.multinomial Rand.rng ~n:ps ~p:mult_piis) in
   let mut_tot, nm_counts = List.hd xps, List.tl xps in
   let mut_ntypes = if mut_tot > 1 
-    then 1 + (Gsl.Randist.binomial Rand.rng lambda (mut_tot - 1)) 
+    then 1 + (Gsl.Randist.binomial Rand.rng ~p:lambda ~n:(mut_tot - 1)) 
     else mut_tot in
   let mut_counts = Array.map ((+) 1) 
-    (Gsl.Randist.multinomial Rand.rng (mut_tot - mut_ntypes)
-    (Array.make mut_ntypes (1. /. fl mut_ntypes))) in
+    (Gsl.Randist.multinomial Rand.rng ~n:(mut_tot - mut_ntypes)
+      ~p:(Array.make mut_ntypes (1. /. fl mut_ntypes))) in
   let maxty, mut_pop = idpop_of_counts maxty (atol mut_counts) in
   let result = (maxty, 
     Mu.fold2 (fun (ty,_) ct pop -> (ty,ct)::pop) mut_pop pop nm_counts) in
@@ -326,7 +326,7 @@ let noveltybias_wf time_rescaling mu ss next_ps (maxty, pop) =
   let sum_wi = Mu.sumf wis in
   let piis = map (fun w -> (w /. sum_wi) *. (1. -. pimut)) wis in
   let mult_piis = aofl (pimut :: piis) in
-  let xps = atol (Gsl.Randist.multinomial Rand.rng next_ps mult_piis) in
+  let xps = atol (Gsl.Randist.multinomial Rand.rng ~n:next_ps ~p:mult_piis) in
   let mut_tot, nm_counts = List.hd xps, List.tl xps in
   let maxty, mut_pop = idpop_of_counts maxty (Mu.repeat mut_tot 1) in
   let result = (maxty, omit_zeros
@@ -349,7 +349,7 @@ let noveltybias_wm_wf ss next_ps (maxty, pop) = match pop with
     let sum_wi = Mu.sumf wis in
     let piis = map (fun w -> (w /. sum_wi)) wis in
     let mult_piis = aofl piis in
-    let counts = atol (Gsl.Randist.multinomial Rand.rng next_ps mult_piis) in
+    let counts = atol (Gsl.Randist.multinomial Rand.rng ~n:next_ps ~p:mult_piis) in
     (maxty, omit_zeros
       (Mu.fold2 (fun (ty,_) ct pop -> (ty,ct)::pop) [] pop counts)))
 
@@ -849,7 +849,7 @@ let likelihood mu wf updates =
     let piis = pimut :: (map (fun wi -> wi /. tot_wi *. (1. -. pimut)) wis) in
     let counts = mut_ct :: map snd nonmut_us in
     (* Printf.printf "gslll\t%F\t%F\n%!" (Mu.sumf piis) tot_wi ; *)
-    tot +. Gsl.Randist.multinomial_lnpdf (aofl piis) (aofl counts) in
+    tot +. Gsl.Randist.multinomial_lnpdf ~p:(aofl piis) ~n:(aofl counts) in
   fold sum_gen 0. updates
 
 let ml_mutation_rate updates = 
@@ -1096,7 +1096,8 @@ let observed_information_var mlmu indty mlss annupdates =
   let sdvect = Gsl.Vector.of_array (Array.make (ddd - 1) (-.1.)) in
   let varsd =
     let v1 = Gsl.Vector.copy sdvect in
-    Gsl.Blas.gemv Gsl.Blas.NoTrans 1. lower_var_ss sdvect 0. v1 ;
+    Gsl.Blas.gemv Gsl.Blas.NoTrans 
+      ~alpha:1. ~a:lower_var_ss ~x:sdvect ~beta:0.  ~y:v1 ;
     Gsl.Blas.dot v1 sdvect in
 
   let varss = Array.make dd nan in
@@ -1230,7 +1231,7 @@ let likelihood_cen nu wty mutty mutp annupdates =
       ([], [], 0, [], 0.) (rev nonmut_us) in
     let piis = pi0 :: (map (fun wi -> wi /. zz *. (1. -. pi0)) wis) in
     let counts = mut_ct :: counts in
-    (tot +. Gsl.Randist.multinomial_lnpdf (aofl piis) (aofl counts),
+    (tot +. Gsl.Randist.multinomial_lnpdf ~p:(aofl piis) ~n:(aofl counts),
      (gen, mut_ct + nmps, mutty :: types, counts, piis) :: ress) in
   let (ll, ress) = fold sum_gen (0., []) annupdates in
   (ll, rev ress)
@@ -1238,7 +1239,7 @@ let likelihood_cen nu wty mutty mutp annupdates =
 let likelihood_diffll ss indty mutp annuds =
   (* let zeros = Array.make (Array.length ss) 0. in *)
   let (obs, exs, ress) = diffll_ress ss ss indty mutp annuds in
-  let ll = Gsl.Randist.multinomial_lnpdf exs obs in
+  let ll = Gsl.Randist.multinomial_lnpdf ~p:exs ~n:obs in
   (ll, ress)
 
 (* Warning: Censored timeseries should never explicitly list counts such as 0
@@ -1260,8 +1261,9 @@ let ml_mm mutty mutp indty dd annupdates =
   let mm sms =
     let (obs, exs, ress) = diffll_ress zeros sms indty mutp annupdates in
     let ll = Gsl.Randist.multinomial_lnpdf 
-      (Array.map2 (fun ss ctz -> if is_nan ss then 0. else exp ss *. ctz)
-         sms exs) obs in
+      ~p:(Array.map2 (fun ss ctz -> if is_nan ss then 0. else exp ss *. ctz)
+         sms exs) 
+      ~n:obs in
     let optss = Array.map2 (fun ob ex -> log (fl ob /. ex)) obs exs in
     let smean = Mu.meanf_n (atol optss) in
     let optss = Array.map (fun x -> x -. smean) optss in
@@ -1500,7 +1502,7 @@ let resample annuds =
         (map (fun (_,(ct,_)) -> if ct <= dd then ps else cur + ct) ups)) 
              nups in
       let probf = fl (ps - cur) /. (exp -. fl cur) in
-      Gsl.Randist.bernoulli Rand.rng probf == 0 in
+      Gsl.Randist.bernoulli Rand.rng ~p:probf == 0 in
     let unifa = Array.make nups (1. /. fl nups) in
     let unif = Gsl.Randist.discrete_preproc unifa in (* uniform distribution *)
     (gen, List.sort compare 
