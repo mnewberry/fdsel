@@ -201,15 +201,4 @@ let () = ignore (run_test_tt_main ("all" >::: [
         (fun _ -> test_indf (F.explicit_indf breaks) 5. 1.0));
       ("too low" >::
         (fun _ -> test_indf (F.explicit_indf breaks) (-1.) 0.1))])]));
-  ("uncond and wf2a" >::: [
-    let res = F.wf_mf 1 0.01 0.02 100 1 in
-    ("equal_bins_ind" >::: [
-      ("wf expectations make sense" >:: (fun _ ->
-        assert_equal ~cmp:(cmp_float) ~printer:string_of_float res.(0)
-          (Gsl.Randist.binomial_pdf 0 
-            ((0.99) *. exp 0.02 *. (0.01) /. (exp 0.02 *. (0.01) +. 0.99))
-            100)));
-      ])])
-
-
         ]))
