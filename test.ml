@@ -1,6 +1,7 @@
 module F = Fdsel_lib
 let rev = Mu.rev and hd = List.hd
 
+(*
 let basic_test_CIs omit =
   let run seed = 
     let ps = 1000 and ngen = 100 and nbins = 3 and sels = [|0.01;0.;-.0.01|] in
@@ -12,14 +13,14 @@ let basic_test_CIs omit =
       (F.agg_all_knil (F.pop_of_idpop init_pop))
       (F.wright_fisher 25. (F.norm 5 ps) (F.w_pwc indf sels)) init_pop in
     let (params, loglikelihood,_,_) = F.infer_params
-      (-1) F.default_mutp indty nbins data.F.ups in
+      (None) F.default_mutp indty nbins data.F.ups in
     abs_float ((fst (params.F.sels)).(0) -. 0.01) < 
       1.96 *. (snd params.F.sels).(0) in
 
   let (nwithin, ntot) = Mu.fold
     (fun seed (n, ntot) -> if run () then n + 1, ntot + 1 else n, ntot + 1)
     (0,0) (Mu.range 1 1000) in
-  Printf.printf "%d/%d\n%!" nwithin ntot
+  Printf.printf "%d/%d\n%!" nwithin ntot *)
 
 open OUnit2 ;;
 
@@ -112,7 +113,7 @@ let () = ignore (run_test_tt_main ("all" >::: [
     let uds = F.update_data (map snd ts) in
     let annuds = F.annupdate_data ts in
     let annuds_ub = F.annupdates_ub 20 "CENSORED" ts in
-    let (indf, breaks) = F.log_binning 10 None uds in
+    let (indf, breaks) = F.log_binning 10 None None annuds in
     let indty = F.findty indf in
     let sels = Array.make 10 0. in
     let (obs, exs) = F.diffll sels indf sels uds in
@@ -122,8 +123,8 @@ let () = ignore (run_test_tt_main ("all" >::: [
     let lhd = F.likelihood mu (F.w_pwc indf sels1) uds in
     let (lhdc, lhdress) = F.likelihood_cen mu (F.w_pwcty indty sels1) 
       "MUT" F.default_mutp annuds in
-    let (pmu, psels, pll) = F.ml_mm_pwclf None indf sels uds in
-    let (cmu, csels, cll,_,_) = F.ml_mm "" F.default_mutp indty 10 annuds in
+    (* removed legacy test let (pmu, psels, pll) = F.ml_mm_pwclf None indf sels uds in *)
+    let (cmu, csels, cll,_) = F.ml_mm "" F.default_mutp indty 10 annuds in
     [("annupdates preserves updates" >:: (fun _ -> assert_equal 
       uds (F.bare_updates annuds)));
     ("annupdates_ub preserves popsizes" >:: (fun _ -> assert_equal 
@@ -138,18 +139,20 @@ let () = ignore (run_test_tt_main ("all" >::: [
       (rev (hd (rev (F.pop_sizes_uds_prime uds)) 
             :: rev (F.pop_sizes_uds uds)))));
     ("diffll_ress agrees with diffll obs when mutp = (frc = 0)" >:: 
-      (fun _ -> assert_equal obs obsa));
+      (fun _ -> assert_equal obs (Array.map float_of_int obsa)));
     ("diffll_ress agrees with diffll exp when mutp = (frc = 0)" >:: 
       (fun _ -> assert_equal exs exsa));
     ("likelihoods agree" >:: 
       (fun _ -> assert_equal lhd lhdc));
     ("mutation and numigration agree when mutp = f == 0" >:: 
       (fun _ -> assert_equal (F.ml_mutation_rate uds) 
-        (F.ml_numigration_rate F.default_mutp annuds)));
+        (F.ml_numigration_rate F.default_mutp annuds)))
+    (* removed legacy test
     ("ml_mm functions agree under the circumstances" >:: 
-     (fun _ -> assert_equal (pmu, psels) (cmu, csels)));
+     (fun _ -> assert_equal ~printer:(Std.dump) (pmu, psels) (cmu, csels)));
     ("ml_mm functions agree in ll up to numerical error" >:: 
-     (fun _ -> assert_equal 0. (max 1e-15 (pll -. cll) -. 1e-15)))
+     (fun _ -> assert_equal ~cmp:(cmp_float ~epsilon:1e-15) 
+        ~printer:string_of_float pll cll)) *)
         ]));
   ("test explicit_indf" >::: (
     let breaks = [0.1;0.2;0.3;0.4;0.5;0.6;0.7;0.8;0.9] in
@@ -197,4 +200,16 @@ let () = ignore (run_test_tt_main ("all" >::: [
       ("too high" >::
         (fun _ -> test_indf (F.explicit_indf breaks) 5. 1.0));
       ("too low" >::
-        (fun _ -> test_indf (F.explicit_indf breaks) (-1.) 0.1))])]))]))
+        (fun _ -> test_indf (F.explicit_indf breaks) (-1.) 0.1))])]));
+  ("uncond and wf2a" >::: [
+    let res = F.wf_mf 1 0.01 0.02 100 1 in
+    ("equal_bins_ind" >::: [
+      ("wf expectations make sense" >:: (fun _ ->
+        assert_equal ~cmp:(cmp_float) ~printer:string_of_float res.(0)
+          (Gsl.Randist.binomial_pdf 0 
+            ((0.99) *. exp 0.02 *. (0.01) /. (exp 0.02 *. (0.01) +. 0.99))
+            100)));
+      ])])
+
+
+        ]))
