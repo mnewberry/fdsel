@@ -145,7 +145,8 @@ let () = ignore (run_test_tt_main ("all" >::: [
     ("diffll_ress agrees with diffll exp when mutp = (frc = 0)" >:: 
       (fun _ -> assert_equal exs exsa));
     ("likelihoods agree" >:: 
-      (fun _ -> assert_equal lhd lhdc));
+      (fun _ -> assert_equal ~cmp:cmp_float ~printer:string_of_float
+        lhd lhdc));
     ("mutation and numigration agree when mutp = f == 0" >:: 
       (fun _ -> assert_equal (F.ml_mutation_rate uds) 
         (F.ml_numigration_rate F.default_mutp annuds)))
