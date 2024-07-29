@@ -1,109 +1,7 @@
 module F = Fdsel_lib
 let rev = Mu.rev and hd = List.hd
 
-(*
-let basic_test_CIs omit =
-  let run seed = 
-    let ps = 1000 and ngen = 100 and nbins = 3 and sels = [|0.01;0.;-.0.01|] in
-    let indf = F.equal_bins_ind None nbins in
-    let indty = F.findty indf in
-    let init_pop = F.monomorphic_idpop ps in
-    let data = F.simulate ~seed:(Some (Rand.time_of_day ())) 
-      ~demog:(F.Fixed (ps,ngen)) (F.agg_all 1) 
-      (F.agg_all_knil (F.pop_of_idpop init_pop))
-      (F.wright_fisher 25. (F.norm 5 ps) (F.w_pwc indf sels)) init_pop in
-    let (params, loglikelihood,_,_) = F.infer_params
-      (None) F.default_mutp indty nbins data.F.ups in
-    abs_float ((fst (params.F.sels)).(0) -. 0.01) < 
-      1.96 *. (snd params.F.sels).(0) in
-
-  let (nwithin, ntot) = Mu.fold
-    (fun seed (n, ntot) -> if run () then n + 1, ntot + 1 else n, ntot + 1)
-    (0,0) (Mu.range 1 1000) in
-  Printf.printf "%d/%d\n%!" nwithin ntot *)
-
 open OUnit2 ;;
-
-(*
-  module F = Fdsel_lib ;;
-  let nbins = 10 and norm = F.norm and wtt = "WT" and cenct = 10000 ;;
-  let ts_gtc = F.parse_timeseries_gtc
-    "../fdanalysis/langs/out/timeseries-usipums10wt.tsv" ;;
-  let timeseries = F.gen_type_count_to_timeseries ts_gtc ;;
-  let pop_sizes = F.pop_sizes_ts timeseries ;;
-  let minfreq = Some (F.max_censored_freq (cenct - 1) pop_sizes) ;;
-  let mutp = F.nomut_mutp ;;
-  let annuds = F.annupdates_ub cenct wtt timeseries ;;
-  (* let annuds = F.annupdate_data timeseries ;; *)
-  let (nbins, (indf, breaks)) = 
-    (nbins, F.log_binning nbins (Some wtt) minfreq annuds) ;;
-  let (totbins, indty) = let  minf = Mu.opt_req minfreq in
-    (nbins + 1,
-      (fun nnt (ty, (frc, _)) -> let ff = norm frc nnt in
-        if ty = wtt || ff < minf then 0 else indf ff + 1)) ;;
-  let (params, ll, dress, lress) =
-    F.infer_params (Some wtt) "MUT" mutp indty totbins annuds ;;
-  let (mu, sels, ll, dre) = F.ml_mm "MUT" mutp indty totbins annuds ;;
-
-
-
-
-  module F = Fdsel_lib ;;
-  let nbins = 10 and norm = F.norm and wtt = "CENSORED" and cenct = 1 ;;
-  let ts_gtc = F.parse_timeseries_gtc 
-    "../fdanalysis/names/out/timeseries-netherlands.tsv" ;;
-  let timeseries = F.gen_type_count_to_timeseries ts_gtc ;;
-  let pop_sizes = F.pop_sizes_ts timeseries ;;
-  let minfreq = Some (F.max_censored_freq (cenct - 1) pop_sizes) ;;
-  let mutp = F.nomut_mutp ;;
-  let annuds = F.annupdates_ub cenct wtt timeseries ;;
-  (* let annuds = F.annupdate_data timeseries ;; *)
-  let (nbins, (indf, breaks)) = 
-    (nbins, F.log_binning nbins (Some wtt) minfreq annuds) ;;
-  let (totbins, indty) = let  minf = Mu.opt_req minfreq in
-    (nbins + 1,
-      (fun nnt (ty, (frc, _)) -> let ff = norm frc nnt in
-        if ty = wtt || ff < minf then 0 else indf ff + 1)) ;;
-  let (params, ll, dress, lress) =
-    F.infer_params (Some wtt) "MUT" mutp indty totbins annuds ;;
-  let (mu, sels, ll, dre) = F.ml_mm "MUT" mutp indty totbins annuds ;;
-
-  (* SSA settings *)
-  module F = Fdsel_lib ;;
-  let ts_gtc = F.parse_timeseries_gtc "../fdanalysis/names/out/timeseries-ssaCd35dCE.tsv" ;;
-  let timeseries = F.gen_type_count_to_timeseries ts_gtc ;;
-  let pop_sizes = F.pop_sizes_ts timeseries ;;
-  let minfreq = Some (F.max_censored_freq (5 - 1) pop_sizes) ;;
-  let mutp = F.nomut_mutp ;;
-  let annuds = F.annupdate_data timeseries ;;
-  let nbins = 20 and norm = F.norm ;;
-  let (nbins, (indf, breaks)) = 
-    let updates = F.bare_updates annuds in
-    (nbins, F.log_binning nbins minfreq updates) ;;
-  let (totbins, indty) = let wtt = "CENSORED" and minf = Mu.opt_req minfreq in
-    (nbins + 1,
-      (fun nnt (ty, (frc, _)) -> let ff = norm frc nnt in
-        if ty = wtt || ff < minf then 0 else indf ff + 1)) ;;
-  let (params, ll, dress, lress) =
-    F.infer_params "MUT" mutp indty totbins annuds ;;
-  let (mu, sels, ll, dre) = F.ml_mm "MUT" mutp indty totbins annuds ;;
-  
-  open F ;;
-  let zeros = Array.make totbins 0. and dd = totbins and annupdates = annuds ;;
-
-  let sms = zeros ;;
-  let (obs, exs, ress) = diffll_ress zeros sms indty mutp annupdates ;;
-  let ll = Gsl.Randist.multinomial_lnpdf
-      (Array.map2 (fun ss ctz -> if is_nan ss then 0. else exp ss *. ctz) 
-        sms exs) obs ;;
-  let optss = Array.map2 (fun ob ex -> log (fl ob /. ex)) obs exs ;;
-  let smean = Mu.meanf_n (atol optss) ;;
-  let optss = Array.map (fun x -> x -. smean) optss ;;
-  let sms = optss ;;
-
-  let nuest = ml_numigration_rate mutp annupdates ;;
-
-*)
 
 let () = ignore (run_test_tt_main ("all" >::: [
   ("test updates" >::: (
@@ -204,4 +102,15 @@ let () = ignore (run_test_tt_main ("all" >::: [
         (fun _ -> test_indf (F.explicit_indf breaks) 5. 1.0));
       ("too low" >::
         (fun _ -> test_indf (F.explicit_indf breaks) (-1.) 0.1))])]));
+  ("gen_intervals" >::: (
+    let ts1 = F.gen_type_count_to_timeseries 
+      (F.parse_timeseries_gtc "test/g1ts.tsv") in
+    let ts2 = F.gen_type_count_to_timeseries 
+      (F.parse_timeseries_gtc "test/g12ts.tsv") in
+    [("single generation" >:: 
+      (fun _ -> assert_equal [] (F.gen_intervals [List.hd ts1])));
+    ("no generation" >:: (fun _ -> assert_equal [] (F.gen_intervals [])));
+    ("generation 1" >:: (fun _ -> assert_equal [1] (F.gen_intervals ts1)));
+    ("odd generations" >::
+      (fun _ -> assert_equal [1;2] (F.gen_intervals ts2)))]))
         ]))

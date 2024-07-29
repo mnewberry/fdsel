@@ -171,7 +171,15 @@ let update_kons_nf lnfkons tnfkons this_pop (last_pop, acc) =
       with Not_found -> lnfkons (0, this_ct) tl in
     (this_pop, (fold kons nonmut_ups this_pop :: acc))
 
-let annupdate_kons_nf lnfkons tnfkons (tgen, tpop) ((lgen, lpop), acc) =
+let annupdate_kons_nf gint lnfkons tnfkons (tgen, tpop) ((lgen, lpop), acc) =
+    (* The inference doesn't know what to do with inconsistent time steps *)
+    (* and the current code doesn't even really have the right information *)
+    (* so we call inferences longer (or shorter!) than expected breaks in *)
+    (* the timeseries: *)
+    if lgen + gint <> tgen then ((tgen, tpop), acc) else
+    (* note it's possible to confuse fdsel by oversampling, *)
+    (* eg if gens = [10;12;20;25;30] and gint = 10, it will find no valid *)
+    (* intervals. *)
     let tmap = Mp.of_assoc tpop in
     let lmap = Mp.of_assoc lpop in
     let kons (ty,lct) tl =
@@ -184,7 +192,9 @@ let annupdate_kons_nf lnfkons tnfkons (tgen, tpop) ((lgen, lpop), acc) =
     ((tgen, tpop), ((lgen, fold kons nonmut_ups tpop) :: acc))
 
 (* impute missing type counts and borrow counts from the wildtype count *)
-let annupdate_kons_wt nfct wtt (tgen, tpop) ((lgen, lpop), acc) =
+let annupdate_kons_wt gint nfct wtt (tgen, tpop) ((lgen, lpop), acc) =
+    (* skip inconsistent intervals, see annupdate_kons_nf *)
+    if lgen + gint <> tgen then ((tgen, tpop), acc) else
     let tmap = Mp.of_assoc tpop in
     let lmap = Mp.of_assoc lpop in
     let wtc = try Mp.find wtt lmap with Not_found -> 0 in
@@ -209,11 +219,11 @@ let aggregate_wt wtty indty annuds =
       else (wtf, wtt, (ty, (frc, toc)) :: acc)) (0, 0, []) ups in
     (gen, (wtty, (wtf, wtt)) :: rev acc)) annuds
 
-let annupdates_ub nfct wtt ts =
+let annupdates_ub gt nfct wtt ts =
   rev (snd
-    (fold (annupdate_kons_wt nfct wtt) (List.hd ts, []) (List.tl ts)))
+    (fold (annupdate_kons_wt gt nfct wtt) (List.hd ts, []) (List.tl ts)))
 
-let annupdate_kons a b = annupdate_kons_nf Mu.cons Mu.cons a b
+let annupdate_kons gt a b = annupdate_kons_nf gt Mu.cons Mu.cons a b
 
 let bare_updates annup =
   map (map snd) (map snd annup)
@@ -234,13 +244,13 @@ let update_data_nozero data =
               ((List.hd data), []) (List.tl data)))
 
 (* See equivalent updates functions above *)
-let annupdate_data_nf lnfkons tnfkons timeseries = 
-  rev (snd (fold (annupdate_kons_nf lnfkons tnfkons)
+let annupdate_data_nf gt lnfkons tnfkons timeseries = 
+  rev (snd (fold (annupdate_kons_nf gt lnfkons tnfkons)
               ((List.hd timeseries), []) (List.tl timeseries)))
 let idk a b = b (* identity kons means ignore the transition *)
-let annupdate_data_nomut ts  = annupdate_data_nf idk     Mu.cons ts
-let annupdate_data_nozero ts = annupdate_data_nf idk     idk     ts
-let annupdate_data ts        = annupdate_data_nf Mu.cons Mu.cons ts
+let annupdate_data_nomut gt ts  = annupdate_data_nf gt idk     Mu.cons ts
+let annupdate_data_nozero gt ts = annupdate_data_nf gt idk     idk     ts
+let annupdate_data gt ts        = annupdate_data_nf gt Mu.cons Mu.cons ts
 
 type 'a pop = ('a * int) list
 type idpop = (int * (int pop)) (* maxtype x pop *)
@@ -659,15 +669,13 @@ type 'a agg_t = {
   pops : (int * ('a * int) list) list ; (* [(generation, [(type,count)])] *)
   nupd : int }
 
-
-
 let agg_all_print print sampling_interval pop agg =
   if (agg.nupd + 1) mod sampling_interval <> 0 then {
     agg with nupd = agg.nupd + 1 } else
   let this_pop = agg.nupd + 1, pop in
   print this_pop ;
   { pop = this_pop ;
-    ups = snd (annupdate_kons this_pop (agg.pop, agg.ups)) ;
+    ups = snd (annupdate_kons 1 this_pop (agg.pop, agg.ups)) ;
     dist = merge_totals pop agg.dist ;
     pops = this_pop :: agg.pops ;
     nupd = agg.nupd + 1 }
@@ -1420,6 +1428,15 @@ let parse_tsv_date_range path =
       path path) in
   let dates = map int_of_string (Mu.splitnl dates) in
   Mu.min_max dates
+
+let gen_intervals ts = 
+  let inc iv ivs = BatList.modify_def 1 iv ((+) 1) ivs in
+  let rec count_ivs ts (last, ivs) = match ts with
+      [] -> ivs
+    | (gen, _) :: tl -> count_ivs tl (gen, inc (gen - last) ivs) in
+  match ts with 
+     [] -> []
+   | (gen, _) :: tl -> Mu.map fst (count_ivs tl (gen, []))
 
 type params = {
   mu : (float * float) ;

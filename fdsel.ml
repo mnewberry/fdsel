@@ -35,6 +35,7 @@ and bootstrap_out_fn = ref None
 and bins_in_fn = ref None
 and bins_out_fn = ref None
 and ne_out_fn = ref None
+and gen_int = ref None
 and run = ref (fun () -> ())
 and run_str = ref ""
 
@@ -71,9 +72,9 @@ let parse_binning_args minfreq annuds bins_inch =
   match (!nbins, !nlogbins, !nqbins, bins_inch) with
       (None, None, None, None) -> argsfail
         "At least one of -k, -l, -q or -B must be specified."
-    | (Some nbins, None, None, None) -> 
+    | (Some nbins, None, None, None) ->
         (nbins, F.equal_binning nbins minfreq)
-    | (None, Some nbins, None, None) -> 
+    | (None, Some nbins, None, None) ->
         (nbins, F.log_binning nbins !wildtype minfreq annuds)
     | (None, None, Some nbins, None) ->
         (nbins, F.quantile_binning nbins !wildtype minfreq annuds)
@@ -83,18 +84,35 @@ let parse_binning_args minfreq annuds bins_inch =
     | _ -> argsfail
         "At most one of -k, -l, -q or -B must be specified."
 
-let parse_update_args ts =
+let parse_update_args gen_int ts =
   match (!nomut, !nozero, !cenlev, !cenub) with
-    (false,false,None,false) -> F.annupdate_data ts
+    (false,false,None,false) -> F.annupdate_data gen_int ts
   | (false,false,None,true) -> argsfail "-c argument is required for -C"
-  | (false,false,Some _,false) -> F.annupdate_data ts
+  | (false,false,Some _,false) -> F.annupdate_data gen_int ts
   | (false,false,Some cenct,true) -> 
       let wtt = req "-w argument is required for -C" wildtype in
-      F.annupdates_ub cenct wtt ts
-  | (false,true,None,false) -> F.annupdate_data_nozero ts
-  | (true,true,None,false) -> warn "-U implies -u" ; F.annupdate_data_nozero ts
-  | (true,false,None,false) -> F.annupdate_data_nomut ts
+      F.annupdates_ub gen_int cenct wtt ts
+  | (false,true,None,false) -> F.annupdate_data_nozero gen_int ts
+  | (true,true,None,false) -> warn "-U implies -u" ; F.annupdate_data_nozero gen_int ts
+  | (true,false,None,false) -> F.annupdate_data_nomut gen_int ts
   | _ -> argsfail "-u/-U and -c/-C are incompatible"
+
+(* prevent the user from passing timeseries with inconsistent timesteps *)
+let parse_gen_args ts =  match F.gen_intervals ts with
+    [] -> argsfail "Timeseries contains only a single generation."
+  | n :: [] -> n
+  | n :: tl -> (match !gen_int with
+      None -> let iv = Mu.min (n::tl) in
+warn "Inconsistent timesteps are not supported. This timeseries contains";
+warn (Printf.sprintf 
+     "intervals: %s" (Mu.joinsp (Mu.map string_of_int (n::tl))));
+warn "Only the smallest will be used. Other intervals will be skipped.";
+warn "To suppress this warning, specify the time interval";
+warn (Printf.sprintf "between generations, eg with -t %i." iv);
+       iv
+    | Some iv -> 
+        if Mu.some ((=) iv) (n::tl) then iv 
+        else argsfail "Argument to -t does not match any time interval.")
 
 let run_inf () =
   let cl = close_out in
@@ -119,7 +137,8 @@ let run_inf () =
   let mutp = match !cenlev with
       Some count -> F.nomut_mutp
     | None -> F.default_mutp in
-  let annuds = parse_update_args timeseries in
+  let gen_int = parse_gen_args timeseries in
+  let annuds = parse_update_args gen_int timeseries in
   doopt sizesch (fun ch -> F.fprint_pop_sizes_ts ch "" timeseries ; cl ch) ;
   let (nbins, (indf, breaks)) = parse_binning_args minfreq annuds bins_inch in
   let (totbins, indty) = F.parse_indty_args nbins indf !wildtype minfreq in
@@ -248,7 +267,8 @@ let run_ts () =
     | Some k -> F.births_gtc_to_timeseries (fun _ -> k) ts_gtc in
   let pop_sizes = F.pop_sizes_ts timeseries in
   let minfreq = parse_minfreq pop_sizes in
-  let annuds = parse_update_args timeseries in
+  let gen_int = parse_gen_args timeseries in
+  let annuds = parse_update_args gen_int timeseries in
   let updates = F.bare_updates annuds in
   doopt updates_outch (fun ch -> F.fprint_updates ch updates) ;
   doopt sizesch (fun ch -> F.fprint_pop_sizes_ts ch "" timeseries ; cl ch) ;
@@ -270,6 +290,7 @@ let parse_arguments =
     ("-i", Arg.String (set_once timeseries_fn), "Input timeseries tsv file");
     ("-P", Arg.String (set_once updates_out_fn), 
       "Output updates datastructure used for inference");
+    ("-t", Arg.Int (set_once gen_int), "time interval between generations");
     ("-c", Arg.Int (set_once cenlev), 
       "Censored counts exist below <count> (required for -C)");
     ("-C", Arg.Set cenub, 
@@ -331,6 +352,7 @@ let parse_arguments =
     ("-i", Arg.String (set_once timeseries_fn), "Input timeseries tsv file");
     ("-P", Arg.String (set_once updates_out_fn), 
       "Output updates datastructure used for inference");
+    ("-t", Arg.Int (set_once gen_int), "time interval between generations");
     ("-c", Arg.Int (set_once cenlev), 
       "Censored counts exist below <count> (required for -C)");
     ("-C", Arg.Set cenub, 
