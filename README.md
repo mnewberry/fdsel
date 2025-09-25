@@ -24,14 +24,14 @@ install using OPAM. Once OPAM is installed and configured, the libraries can be
 installed with:
 
 ```
-opam install batteries pcre gsl
+opam install batteries pcre2 gsl
 ```
 
 Once the dependencies are installed, building is easiest using findlib and
 ocamlbuild, which are also included as part of OPAM:
 
 ```
-ocamlbuild -pkgs gsl,pcre,batteries fdsel.native
+ocamlbuild -pkgs gsl,pcre2,batteries fdsel.native
 ```
 
 This command is included for convenience in a file called make.sh. Hence `sh

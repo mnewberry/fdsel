@@ -311,10 +311,10 @@ let repeat n x =
 
 (** {7 words from perl} *)
 
-let split = Pcre.split ~pat:""
-let splitws = Pcre.split
-let splitnl = Pcre.split ~pat:"\\n"
-let splittab = Pcre.split ~pat:"\\t"
+let split = Pcre2.split ~pat:""
+let splitws = Pcre2.split
+let splitnl = Pcre2.split ~pat:"\\n"
+let splittab = Pcre2.split ~pat:"\\t"
 let join = String.concat
 let joinsp = String.concat " "
 let joinnl = String.concat "\n"
